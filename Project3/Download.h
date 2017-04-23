@@ -26,7 +26,7 @@ public:
 	Downloader(const Options& player_options);
 	virtual ~Downloader();
 	Options options;
-	virtual vector<string> getAllImages(string&) { assert(0); return vector<string>(); };
+	virtual vector<string> getAllImages(string&) = 0;
 	void download(vector<string>&);
 	string createDirectory(string); //creates a directory and modifies the folder_path to the input folder.
 protected:
@@ -44,9 +44,12 @@ protected:
 	virtual vector<std::pair<string, string>> mapUrls(vector<string>&);
 	virtual vector<string> getPureImgUrl(vector<std::pair<string,string>>&);//some posts will direct to a webpage with the img, but here we obtain the pure image file, not the webpage of it.
 	void changeImgToMp4(string&); // changed imgur posts to mp4 extension, needed because .gif and .gifv can sometimes not work as expected.
-	virtual string getUrlsFromJson(string&) { assert(0); return""; }; //takes an unparsed json and gets the urls from it which points to the images or some random post we don't want.
-	virtual bool validate(string&) { assert(0); return false; }; //validates the url to make sure it is a reddit/4chan/imgur url.
+	virtual int getUrlsFromJson(string&) = 0; //takes an unparsed json and gets the urls from it which points to the images or some random post we don't want.
+	virtual bool validate(string&) = 0; //validates the url to make sure it is a reddit/4chan/imgur url.
 };
+
+
+
 
 class RedditDownloader : public Downloader {
 public:
@@ -54,19 +57,38 @@ public:
 	virtual vector<string> getAllImages(string&) override;
 private:
 	void nextPage(string&,string&);
-	virtual string getUrlsFromJson(string&) override;
+	void appendJsonString(string&);
+	virtual int getUrlsFromJson(string&) override;
 	virtual bool validate(string&) override;
 };
+extern bool redditOptions(Options&);
+
+extern void runRedditDownloader(string& imgur_auth, string& curr_direct);
+
+
+
+
 
 class ChanDownloader : public Downloader{
 public:
+	using Downloader::Downloader;
+	virtual vector<string> getAllImages(string&) override;
 private:
+	virtual bool validate(string&) override;
 };
+extern void runChanDownloader(string&);
+
+
 
 class ImgurDownloader : public Downloader {
 public:
+	
 private:
+	
 };
+
+
+
 
 class TumblrDownloader : public Downloader {
 public:

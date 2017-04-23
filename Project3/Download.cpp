@@ -51,7 +51,12 @@ string Downloader::createDirectory(string path) {
 	return path;
 }
 
-
+/*
+* We only support pure reddit post,Imgur, 4chan, tumblr, gfycat posts.
+* This function takes the url and checks if it is suitable for usage.
+* We do not support whole reddit posts, whole chan posts, or whole tumblr posts.
+* We do support imgur gallerys, implementation in another function.
+*/
 bool Downloader::removeNonSupported(const string& url) {
 	try {
 		string reddit_pattern("i.redd.it/.+\\."), imgur_pattern("(i.)?imgur.com/((.+\\.)|(gallery/.+)|(a/.+)|.+)"), chan_pattern("i.4cdn.org/.+/\\d+\\."),
@@ -78,7 +83,7 @@ bool Downloader::removeNonSupported(const string& url) {
 vector < std::pair<string, string>> Downloader::mapUrls(vector<string>& unmaped_urls) {
 	vector<std::pair<string, string>> mapped_urls; //first string is the url, the second is the identification
 	string imgur_pattern("(i\\.)?imgur.com/(gallery/)?(a/)?(.+\\.)?"), gfycat_pattern("gfycat.com/(.+/)?"); //matches the wrong, not the right.
-	for (auto unmapped_url : unmaped_urls) {
+	for (const string& unmapped_url : unmaped_urls) {
 		try {
 			std::regex img_reg(imgur_pattern), gf_reg(gfycat_pattern);
 			std::smatch img_sm, gf_sm;
@@ -244,32 +249,54 @@ void Downloader::download(vector<string>& urls) {
 		extensions.push_back(std::make_pair(std::move(*begin),name));
 	}
 	urls.clear();
+
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &downloadFile);
 	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
 	for (auto& download_urls : extensions) {
-		const string& img_name("\\" + download_urls.second);
+		string& img_name("\\" + download_urls.second);
 		std::experimental::filesystem::path image_path(options.current_path + img_name);
 		bool img_exists = std::experimental::filesystem::exists(image_path);
+
 		if (!(options.duplicate_file == SKIP && img_exists)) {
-			string full_path = (options.duplicate_file == CREATENEW && img_exists) ? (options.current_path + img_name + " (2)") : (options.current_path + img_name);
+			string full_path;
+			if (options.duplicate_file == CREATENEW && img_exists) {
+				int new_duplicate = 2;
+				auto dot = std::find(download_urls.second.cbegin(), download_urls.second.cend(),'.');
+				string ext(dot, download_urls.second.cend());
+				string name(download_urls.second.cbegin(), dot);
+				full_path = options.current_path + "\\"+name + " (" + std::to_string(new_duplicate) + ")" + ext;
+				std::experimental::filesystem::path duplicate_image_path(full_path);
+				bool duplicate_img_exists = std::experimental::filesystem::exists(duplicate_image_path);
+				while (!duplicate_img_exists) {
+					new_duplicate++;
+					full_path = options.current_path + "\\" + name + " (" + std::to_string(new_duplicate) + ")" + ext;
+					duplicate_image_path = std::experimental::filesystem::path(full_path);
+					duplicate_img_exists = std::experimental::filesystem::exists(duplicate_image_path);
+				}
+			}
+			else {
+				full_path = options.current_path + img_name;
+			}
 			std::ofstream ofs(full_path,std::ios::binary);
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ofs);
 			curl_easy_setopt(curl, CURLOPT_URL, download_urls.first.c_str());
 			auto response = curl_easy_perform(curl);
 			if (!(response == CURLE_OK || ofs)) {
-				delete_urls.push_back(options.current_path + img_name);
+				delete_urls.push_back(full_path);
 				cout << error << endl;
 				cout << "Problem downloading file : " << download_urls.second << "\n" <<
 				"url : " << download_urls.first << endl;
 			}
 			else {
-				int size = getFileSize(options.current_path + img_name);
+				int size = getFileSize(full_path);
 				if (size == 0) {
-					delete_urls.push_back(options.current_path +img_name);
+					delete_urls.push_back(full_path);
 				}
 			}
+		} // !if
+		else {
+			cout << download_urls.second << " already exists" << endl;
 		}
-		
 	} // !for
 	curl_easy_reset(curl);
 	for (auto& d : delete_urls) { //delete dead img/gifs with 0 bytes

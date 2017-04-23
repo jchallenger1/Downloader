@@ -71,9 +71,6 @@ extern size_t downloadFile(void *buffer, size_t size, size_t nmemb, std::ofstrea
 
 extern int getFileSize(const string&);
 
-extern bool redditOptions(Options&);
-
-extern void runRedditDownloader(string& imgur_auth,string& curr_direct);
 
 #endif // !FUNCTIONS
 
