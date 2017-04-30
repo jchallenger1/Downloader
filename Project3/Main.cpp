@@ -12,7 +12,8 @@ int main(int argc, char ** argv) {
 	string current_dir(argv[0]);
 
 	cout << "Choose a downloader, (reddit),(imgur),(4chan),(tumblr)" << endl;
-	string type = check<string>("Invalid input, (reddit), (imgur), (4chan), or (tumblr)", {"reddit","imgur","4chan","tumblr"});
+	string type = check<string>("Invalid input, (reddit), (imgur), (4chan), or (tumblr)","", [](const string& s){
+		return s == "reddit" || s == "imgur" || s == "4chan" || s == "tumblr"; });
 	if (type == "reddit") {
 		runRedditDownloader(imgur_authorization, current_dir);
 	}

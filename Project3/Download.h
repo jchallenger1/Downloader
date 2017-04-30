@@ -44,8 +44,8 @@ protected:
 	virtual vector<std::pair<string, string>> mapUrls(vector<string>&);
 	virtual vector<string> getPureImgUrl(vector<std::pair<string,string>>&);//some posts will direct to a webpage with the img, but here we obtain the pure image file, not the webpage of it.
 	void changeImgToMp4(string&); // changed imgur posts to mp4 extension, needed because .gif and .gifv can sometimes not work as expected.
-	virtual int getUrlsFromJson(string&) = 0; //takes an unparsed json and gets the urls from it which points to the images or some random post we don't want.
-	virtual bool validate(string&) = 0; //validates the url to make sure it is a reddit/4chan/imgur url.
+	virtual void getUrlsFromJson(string&) = 0; //takes an unparsed json and gets the urls from it which points to the images or some random post we don't want.
+	virtual bool validate(const string&) = 0; //validates the url to make sure it is a reddit/4chan/imgur url.
 };
 
 
@@ -58,10 +58,10 @@ public:
 private:
 	void nextPage(string&,string&);
 	void appendJsonString(string&);
-	virtual int getUrlsFromJson(string&) override;
-	virtual bool validate(string&) override;
+	virtual void getUrlsFromJson(string&) override;
+	virtual bool validate(const string&) override;
 };
-extern bool redditOptions(Options&);
+extern void redditOptions(Options&);
 
 extern void runRedditDownloader(string& imgur_auth, string& curr_direct);
 
@@ -74,9 +74,16 @@ public:
 	using Downloader::Downloader;
 	virtual vector<string> getAllImages(string&) override;
 private:
-	virtual bool validate(string&) override;
+	string chan_sub;
+	vector<string> processThread(const string&);
+	void getChanSub(const string&);
+	virtual bool validate(const string&) override;
+	void appendJsonString(string&);
 };
 extern void runChanDownloader(string&);
+
+extern bool chanOptions(Options&);
+
 
 
 

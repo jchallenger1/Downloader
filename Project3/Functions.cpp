@@ -30,24 +30,52 @@ int getFileSize(const std::string &fileName) {
 	return fileSize;
 }
 
-int maximumCheck(const int& g) {
-	int x;
-	while (cin.good()) {
-		cin >> x;
-		if (!cin.good()) {
-			cout << "You entered either too large a number or not a number, enter max amount of pages." << endl;
-			cin.clear();
-			cin.ignore();
-			continue;
-		}
-		else {//cin is in a good condition
-			if (g > x) {
-				return x;
-			}
-			else {
-				continue;
-			}
-		}
+std::function<bool(const char&)> yesOrNo = [](const char& user_input) -> bool {
+	return user_input == 'y' || user_input == 'n';
+};
 
-	}//while
+bool runMainOptions(Options& opt) {
+	bool create_new = false;// if it should create a new folder
+
+	cout << "These options is what happens when a duplicate file occurs,\nType 1 to skip it, 2 to overwrite it, 3 to create a new one. " << endl;
+	int dup = check<int>("Invalid input,(1) to skip,(2) to overwrite,(3) to create new", "Only input 1 2 or 3.", [](const int& i) {return i >= 1 && i <= 3; });
+	opt.duplicate_file = dup == 1 ? SKIP : dup == 2 ? OVERWRITE : CREATENEW;
+
+	cout << "Enter (y) if you want to enter a path to a folder to download images, enter (n) if you want us to create a new folder for you." << endl;
+	char path = check<char>("Invalid input, (y) to enter path, (n) for us making a new folder", "Only enter (y)es or (n)o", yesOrNo);
+	string download_path;
+	if (path == 'y') {
+		while (true) {
+			cout << "Enter your path " << endl;
+			cin.ignore();
+			getline(cin, download_path);
+			std::experimental::filesystem::path user_path(download_path);
+			bool exists = std::experimental::filesystem::exists(user_path);
+
+			if (!exists) {
+				cout << download_path << " is not a valid directory." << endl;
+				cout << "Do you want to try again or allow the program to make a new folder? (y/n)" << endl;
+				char again = check<char>("Invalid input, (y) to enter path, (n) for us making a new folder", "Only enter (y)es or (n)o", yesOrNo);
+
+				if (again == 'y') {
+					download_path.clear();
+					continue;
+				}
+				else {
+					create_new = true;
+					break;
+				}
+
+			} // !if exists
+			else {
+				opt.current_path = download_path;
+				break;
+			}
+		}// !while
+
+	} // !if
+	else {
+		create_new = true;
+	}
+	return create_new;
 }

@@ -11,21 +11,15 @@
 using std::cin; using std::cout; using std::endl;
 
 
-int RedditDownloader::getUrlsFromJson(string& data) {
-	try {
-		jsonp = json::parse(data.c_str());
-		auto n = jsonp["data"]["children"];
-		auto begin = n.begin();
-		auto end = n.end();
-		while (begin != end) {
-			urls.push_back((*begin)["data"]["url"]);
-			begin++;
-		}
+void RedditDownloader::getUrlsFromJson(string& data) {
+	jsonp = json::parse(data.c_str());
+	auto n = jsonp["data"]["children"];
+	auto begin = n.begin();
+	auto end = n.end();
+	while (begin != end) {
+		urls.push_back((*begin)["data"]["url"]);
+		begin++;
 	}
-	catch (std::exception err) {
-		return REDDIT_ERROR; // indication of error.
-	}
-	return 1; //indication of success
 }
 
 void RedditDownloader::nextPage(string& query_string,string& url) {
@@ -75,27 +69,29 @@ vector<string> RedditDownloader::getAllImages(string& url) {
 			auto response = curl_easy_perform(curl);
 			curl_easy_reset(curl);
 			if (response == CURLE_OK && !all_reddit_json.empty()) {
-				int success = getUrlsFromJson(all_reddit_json); // parsing the json and getting the urls.
-				if (success != REDDIT_ERROR) {
-					urls.erase(std::remove_if(urls.begin(), urls.end(), removeNonSupported), urls.end()); //remove urls that are not in correct format.
-					auto mapped_urls = mapUrls(urls); //making all urls to make sure they are in the format of only an image
-					std::for_each(mapped_urls.begin(), mapped_urls.end(), [&](std::pair<string,string>& pa) { // changes a gif  or gifv extension to mp4 for better optimization.
-							if (pa.second == "GOOD")
-								changeImgToMp4(pa.first);
-					});
-					auto new_urls = getPureImgUrl(mapped_urls); // on sites that do not have a pure image, we obtain them here.
-					std::function<bool(const std::pair<string, string>&)> fx = [](const std::pair<string, string>& pair_url) {return pair_url.second == "DELETE" ? true : false; };
-					mapped_urls.erase(std::remove_if(mapped_urls.begin(), mapped_urls.end(), fx), mapped_urls.end()); //remove the non pure images
-					std::copy(new_urls.begin(), new_urls.end(), std::back_insert_iterator<vector<string>> (image_urls)); //add them to the main vector with all pure images
-					std::for_each(mapped_urls.begin(), mapped_urls.end(), [&image_urls](std::pair<string,string>& item) { // add them, same as above.
-						image_urls.push_back(std::move(item.first)); // preventing copy
-					});
+				try {
+					getUrlsFromJson(all_reddit_json); // parsing the json and getting the urls.
 				}
-				else {
-					cout << "There was a problem with your url" << endl;
+				catch (const std::exception&) {
+					cout << "There was a problem getting data with your url." << endl;
 					break;
 				}
 				
+				urls.erase(std::remove_if(urls.begin(), urls.end(), removeNonSupported), urls.end()); //remove urls that are not in correct format.
+				auto mapped_urls = mapUrls(urls); //making all urls to make sure they are in the format of only an image
+				std::for_each(mapped_urls.begin(), mapped_urls.end(), [&](std::pair<string,string>& pa) { // changes a gif  or gifv extension to mp4 for better optimization.
+						if (pa.second == "GOOD")
+							changeImgToMp4(pa.first);
+				});
+				auto new_urls = getPureImgUrl(mapped_urls); // on sites that do not have a pure image, we obtain them here.
+				std::function<bool(const std::pair<string, string>&)> fx = [](const std::pair<string, string>& pair_url) {return pair_url.second == "DELETE" ? true : false; };
+				mapped_urls.erase(std::remove_if(mapped_urls.begin(), mapped_urls.end(), fx), mapped_urls.end()); //remove the non pure images
+				std::copy(new_urls.begin(), new_urls.end(), std::back_insert_iterator<vector<string>> (image_urls)); //add them to the main vector with all pure images
+				std::for_each(mapped_urls.begin(), mapped_urls.end(), [&image_urls](std::pair<string,string>& item) { // add them, same as above.
+					image_urls.push_back(std::move(item.first)); // preventing copy
+				});
+				
+
 
 			}
 			else {
@@ -125,7 +121,7 @@ vector<string> RedditDownloader::getAllImages(string& url) {
 	}
 }
 
-bool RedditDownloader::validate(string& url) {
+bool RedditDownloader::validate(const string& url) {
 	string pattern("https?://www.reddit.com/r/\\w+(/(?!comments))?");
 	std::regex reg(pattern);
 	bool a = std::regex_search(url, reg);
@@ -139,67 +135,28 @@ bool RedditDownloader::validate(string& url) {
 #ifndef REDDITFUNCTIONS
 #define REDITFUNCTION
 
-bool redditOptions(Options& opt) {
-	bool create_new = false;
+void redditOptions(Options& opt) {
+
 	cout << "How many pages do you want? Max of 50." << endl;
-	vector<int> ints;
-	for (int x = 1; x != 51; x++)
-		ints.push_back(x);
-	int pages = vectorCheck("Invalid input enter amt of pages 1-50.", ints );
+	int pages = check<int>("Invalid input enter amt of pages 1-50.", "Only numbers between 1-50.", [](const int& i) {return i <= 50; });
 	opt.page_count = pages;
+
 	cout << "What is the maximum amount of files wanted?" << endl;
-	int d = maximumCheck(10000);
+	int d = check<int>("Invalid input, input only a numbers", "Your number is too large!", [](const int& i) { return i <= 10000; });
 	opt.max_files = d;
-	opt.tag = ""; //reddit doesn't use tags.
+
 	cout << "Do you want to gather all images when faced with an entire gallery? (y/n)" << endl;
-	char all = check("Invalid input, Gather all images?(y/n)", { 'y','n' });
+	char all = check<char>("Invalid input, only input (y)es or (n)o","Only input (y)es or (n)o",yesOrNo );
 	opt.all_gallery = all == 'y' ? true : false;
-	cout << "These options is what happens when a duplicate file occurs,\nType 1 to skip it, 2 to overwrite it, 3 to create a new one. " << endl;
-	int dup = check("Invalid input,(1) to skip,(2) to overwrite,(3) to create new", { 1,2,3 });
-	opt.duplicate_file = dup == 1 ? SKIP : dup == 2 ? OVERWRITE : CREATENEW;
-	cout << "Enter (y) if you want to enter a path to a folder to download images, enter (n) if you want us to create a new folder for you." << endl;
-	char path = check("Invalid input, (y) to enter path, (n) for us making a new folder", { 'y','n' });
-	string download_path;
-	if (path == 'y') {
-		while (true) {
-			cout << "Enter your path " << endl;
-			cin.ignore();
-			getline(cin, download_path);
-			std::experimental::filesystem::path user_path(download_path);
-			bool exists = std::experimental::filesystem::exists(user_path);
-			if (!exists) {
-				cout << download_path << " is not a valid directory." << endl;
-				cout << "Do you want to try again or allow the program to make a new folder? (y/n)" << endl;
-				char again = check("Invalid input (y/n)", { 'y','n' });
-				if (again == 'y') {
-					download_path.clear();
-					continue;
-				}
-				else {
-					create_new = true;
-					break;
-				}
-					
-			} // !if exists
-			else {
-				opt.current_path = download_path;
-				break;
-			}
-		}// !while
-		
-	} // !if
-	else {
-		create_new = true;
-	}
-	return create_new;
+
 }
 
 
 void runRedditDownloader(string& imgur_authorization,string& directory) {
 	//Options dev_options{ 1,3000,"",false, imgur_authorization ,string("") ,CREATENEW,"New folder"};
 	Options options{ 0,0,"",false,imgur_authorization,"",SKIP,"Your Pics" };
-	bool new_dir;
-	new_dir = redditOptions(options);
+	bool new_dir = runMainOptions(options);
+	redditOptions(options);
 	RedditDownloader reddit_downloader(options);
 	if (new_dir)
 		reddit_downloader.options.current_path = reddit_downloader.createDirectory(directory);
@@ -215,19 +172,20 @@ void runRedditDownloader(string& imgur_authorization,string& directory) {
 			vector<string> urls = reddit_downloader.getAllImages(input);
 			if (urls.size() != 0) {
 				cout << "You are downloading " << urls.size() << " files, do you want to continue (y/n)?" << endl;
-				char amt = check("Invalid input, (y) to continue, (n) to quit download.", { 'y','n' });
+				char amt = check<char>("Invalid input, (y) to continue, (n) to quit download; downloading : " + std::to_string(urls.size()) 
+					+ " files","Only input (y)es or (n)o", yesOrNo);
 				if (amt == 'y') {
 					reddit_downloader.download(urls);
 					cout << "--Work finished--" << endl;
 				}
 			}
 			else {
-				cout << "There was no media to download, \nurl : " << input << endl;
+				cout << "There was no media to download, make sure the link is a subreddit url and DOES contain media. \nurl recieved : " << input << endl;
 			}
 			cout << "Enter new options? (y/n)" << endl;
-			char new_opts = check("Invalid input, (y/n) for new options", { 'y','n' });
+			char new_opts = check<char>("Invalid input, (y/n) for new options", "Only input (y)es or (n)o for new options",yesOrNo);
 			if (new_opts == 'y') {
-				new_dir = redditOptions(reddit_downloader.options);
+				redditOptions(reddit_downloader.options);
 			}
 		}
 
