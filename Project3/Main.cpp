@@ -5,10 +5,6 @@
 #include "Functions.h"
 using std::string;  using std::endl; using std::cout; 
 
-void n(Downloader& a) {
-
-}
-
 int main(int argc, char ** argv) {
 #if defined(WIN32) || defined(_WIN32) ||defined(__WIN32) || defined(_WIN64)
 	string your_client_id("");
