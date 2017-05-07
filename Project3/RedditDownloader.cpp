@@ -7,11 +7,10 @@
 #include <filesystem>
 #include "Download.h"
 #include "Functions.h"
-#define REDDIT_ERROR 0
 using std::cin; using std::cout; using std::endl;
 
 
-void RedditDownloader::getUrlsFromJson(string& data) {
+void RedditDownloader::getUrlsFromJson(const string& data) {
 	jsonp = json::parse(data.c_str());
 	auto n = jsonp["data"]["children"];
 	auto begin = n.begin();
@@ -22,7 +21,7 @@ void RedditDownloader::getUrlsFromJson(string& data) {
 	}
 }
 
-void RedditDownloader::nextPage(string& query_string,string& url) {
+void RedditDownloader::nextPage(string& query_string,string& url) const {
 
 	if (std::regex_search(url, std::smatch(), std::regex("after"))) {
 		string pattern("after=.+(?!&)");
@@ -40,7 +39,7 @@ void RedditDownloader::nextPage(string& query_string,string& url) {
 }
 
 
-void RedditDownloader::appendJsonString(string& url) {
+void RedditDownloader::appendJsonString(string& url) const {
 	string::iterator question = std::find(url.begin(), url.end(), '?');
 	if (question != url.end()) {
 		string query(question, url.end());
@@ -114,7 +113,8 @@ vector<string> RedditDownloader::getAllImages(string& url) {
 		cout << url << "\n is not a valid url." << endl;
 	}
 	if (image_urls.size() > options.max_files) {
-		return vector<string>(image_urls.begin(), image_urls.begin() + options.max_files);
+		//return vector<string>(image_urls.begin(), image_urls.begin() + options.max_files);
+		image_urls.resize(options.max_files);
 	}
 	else {
 		return image_urls;
@@ -128,21 +128,14 @@ bool RedditDownloader::validate(const string& url) {
 	return a;
 }
 
-
-
-#endif // !REDDITDOWNLOADER
-
-#ifndef REDDITFUNCTIONS
-#define REDITFUNCTION
-
-void redditOptions(Options& opt) {
+void RedditDownloader::websiteOptions(Options& opt) {
 
 	cout << "How many pages do you want? Max of 50." << endl;
 	int pages = check<int>("Invalid input enter amt of pages 1-50.", "Only numbers between 1-50.", [](const int& i) {return i <= 50; });
 	opt.page_count = pages;
 
 	cout << "What is the maximum amount of files wanted?" << endl;
-	int d = check<int>("Invalid input, input only a numbers", "Your number is too large!", [](const int& i) { return i <= 10000; });
+	int d = check<int>("Invalid input, input only a numbers", "Your number is too large! Try again.", [](const int& i) { return i <= 10000; });
 	opt.max_files = d;
 
 	cout << "Do you want to gather all images when faced with an entire gallery? (y/n)" << endl;
@@ -151,45 +144,4 @@ void redditOptions(Options& opt) {
 
 }
 
-
-void runRedditDownloader(string& imgur_authorization,string& directory) {
-	//Options dev_options{ 1,3000,"",false, imgur_authorization ,string("") ,CREATENEW,"New folder"};
-	Options options{ 0,0,"",false,imgur_authorization,"",SKIP,"Your Pics" };
-	bool new_dir = runMainOptions(options);
-	redditOptions(options);
-	RedditDownloader reddit_downloader(options);
-	if (new_dir)
-		reddit_downloader.options.current_path = reddit_downloader.createDirectory(directory);
-	while (true) {
-		string input;
-		cout << "Enter a link to download, otherwise enter quit to exit." << endl;
-		cin.ignore();
-		getline(cin, input);
-		if (input == "quit") {
-			break;
-		}
-		else {
-			vector<string> urls = reddit_downloader.getAllImages(input);
-			if (urls.size() != 0) {
-				cout << "You are downloading " << urls.size() << " files, do you want to continue (y/n)?" << endl;
-				char amt = check<char>("Invalid input, (y) to continue, (n) to quit download; downloading : " + std::to_string(urls.size()) 
-					+ " files","Only input (y)es or (n)o", yesOrNo);
-				if (amt == 'y') {
-					reddit_downloader.download(urls);
-					cout << "--Work finished--" << endl;
-				}
-			}
-			else {
-				cout << "There was no media to download, make sure the link is a subreddit url and DOES contain media. \nurl recieved : " << input << endl;
-			}
-			cout << "Enter new options? (y/n)" << endl;
-			char new_opts = check<char>("Invalid input, (y/n) for new options", "Only input (y)es or (n)o for new options",yesOrNo);
-			if (new_opts == 'y') {
-				redditOptions(reddit_downloader.options);
-			}
-		}
-
-	}
-}
-
-#endif // !REDDITFUNCTIONS
+#endif // !REDDITDOWNLOADER

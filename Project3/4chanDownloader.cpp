@@ -14,60 +14,55 @@
 
 using std::string; using std::cin; using std::cout; using std::endl; using json = nlohmann::json;
 
-vector<string> ChanDownloader::getAllImages(string& url) {
-	vector<string> pure_img;
-	if (validate(url)) {
-		appendJsonString(url);
-		string pure_chan_json;
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &pure_chan_json);
-		auto response = curl_easy_perform(curl);
-		if (response == CURLE_OK && !pure_chan_json.empty()) {
-			getChanSub(url);
-			vector<string> thread_urls = processThread(pure_chan_json);
-			std::move_iterator<vector<string>::iterator> move_begin = std::make_move_iterator(thread_urls.begin());
-			std::move_iterator<vector<string>::iterator> move_end = std::make_move_iterator(thread_urls.end());
-			pure_img.reserve(pure_img.size() + thread_urls.size());
-			pure_img.insert(pure_img.end(), move_begin, move_end);
-		}
-		else {
-			cout << "Encountered a problem with reading your url." << endl;
+
+void ChanDownloader::getUrlsFromJson(const string& json_data) {
+	jsonp = json::parse(json_data.c_str());
+	for (auto post_begin = jsonp["posts"].begin(); post_begin != jsonp["posts"].end(); post_begin++) {
+		if (post_begin->find("w") != post_begin->end() && post_begin->find("h") != post_begin->end()
+			&& post_begin->find("tim") != post_begin->end() && post_begin->find("ext") != post_begin->end()) { //making sure the post has media and not just a comment
+
+			if (min_size < post_begin->value("w", 0) && min_size < post_begin->value("h", 0)) {
+				urls.push_back("http://i.4cdn.org/" + chan_sub + "/" +
+					std::to_string(post_begin->value("tim", unsigned long long int(0))) + post_begin->value("ext", ""));
+			}
+
 		}
 	}
-	else {
-		cout << url << " is not a valid url." << endl;
-	}
-	return pure_img;
+	
 }
 
-vector<string> ChanDownloader::processThread(const string& json_data) {
-	vector<string> url;
-	jsonp = json::parse(json_data.c_str());
-	auto posts = jsonp["threads"]["posts"];
-	auto begin = posts.begin(), end = posts.end();
-	while (begin != end) {
-		if (begin->find("tim") != begin->end() && begin->find("ext") != begin->end())
-			url.emplace_back("http://i.4cdn.org/" + chan_sub + "/" + begin->value("tim", "") + begin->value("ext", ""));
-		begin++;
+vector<string> ChanDownloader::getThreads(const string& page, const string& main_url) {
+	vector<string> new_urls;
+	try {
+		jsonp = json::parse(page.c_str());
+		auto threads = jsonp["threads"];
+		for (auto board_threads = threads.begin(); board_threads != threads.end(); board_threads++) {
+				string threadNumber = std::to_string((*board_threads)["posts"][0].value("no", 0));
+				new_urls.push_back(main_url + "thread/" + threadNumber);
+		}
 	}
-	return url;
+	catch (std::exception& err) {
+		cout << "There was a problem getting the threads from your url." << endl;
+		cout << err.what() << endl;
+	};
+	
+	return new_urls;
 }
 
 void ChanDownloader::getChanSub(const string& url) {
-	string pattern("(?=4chan.org/).+?(?=/)");
+	string pattern("(?:/)(.{1,5})(?:/)");
 	std::smatch sm;
 	std::regex reg(pattern);
 	std::regex_search(url, sm, reg);
-	this->chan_sub = sm.str();
+	this->chan_sub = sm[1].str();
 }
 
-void ChanDownloader::appendJsonString(string& url) {
+void ChanDownloader::appendJsonString(string& url) const {
 	string pattern("boards");
 	string format("api");
-	std::regex_replace(url, std::regex(pattern), format);
+	url = std::regex_replace(url, std::regex(pattern), format);
 	char end_char = *(url.end() - 1);
-	if (isdigit(end_char) && end_char != '/') { //its a thread
+	if (isdigit(end_char) && isdigit(*(url.end() - 2)) && end_char != '/') { //its a thread
 		url.append(".json");
 	}
 	else { //its a board
@@ -77,28 +72,105 @@ void ChanDownloader::appendJsonString(string& url) {
 
 bool ChanDownloader::validate(const string& url) {
 	bool good = false;
-	try {
-		string pattern("(https?://)?boards\\.4chan\\.org/[a-zA-Z1-9]{1,4}/((\\d+)?|(thread/\\d+))(?!/)(?!#)");
-		std::regex chan_regex(pattern);
-		good = std::regex_match(url, std::smatch(),chan_regex);
-	}
-	catch (std::regex_error err) {
-		cout << err.what() << endl;
-	}
+	string pattern("(https?://)?boards\\.4chan\\.org/[a-zA-Z1-9]{1,4}/((\\d+)?|(thread/\\d+))(?!/)(?!#)");
+	std::regex chan_regex(pattern);
+	good = std::regex_match(url, std::smatch(),chan_regex);
 	return good;
 }
 
-#endif
+vector<string> ChanDownloader::getAllImages(string& url) {
+	string base_url = url; //used to create multiple requests on the main board thats requested
+	string::iterator iter = base_url.end() - 1, delete_iter = base_url.end() - 1;
+	while (isdigit(*iter)) {
+		delete_iter = iter--;
+	}
+	if (delete_iter != iter)
+		base_url.erase(delete_iter, base_url.end()); //erase the number at the end if there is one.
 
-#ifndef CHANFUN
-#define CHANFUN
+	vector<string> pure_img;
+	if (validate(url)) {
 
-bool chanOptions(Options&) {
-	return false;
+		appendJsonString(url);
+		string pure_chan_json;
+		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &pure_chan_json);
+		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+		auto response = curl_easy_perform(curl);
+		curl_easy_reset(curl);
+		cout << pure_chan_json << endl;
+		if (response == CURLE_OK && !pure_chan_json.empty()) {
+			getChanSub(url);
+			if (std::regex_search(url, std::smatch(), std::regex("thread"))) { // if its a single thread
+				try {
+					getUrlsFromJson(url);
+				}
+				catch (std::exception& err) {
+					cout << "There was a problem getting the urls from your url." << endl;
+					cout << err.what() << endl;
+				}
+			}
+			else { //if its an entire board
+				vector<string> newThreads = getThreads(pure_chan_json, base_url);
+				if (!newThreads.empty()) { //newThread might have thrown an exception
+					string thread_json;
+					curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
+					curl_easy_setopt(curl, CURLOPT_WRITEDATA, &thread_json);
+					curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+
+					for (string& threadUrl : newThreads) {
+						Sleep(2000);
+						appendJsonString(threadUrl);
+						curl_easy_setopt(curl, CURLOPT_URL, threadUrl.c_str());
+						response = curl_easy_perform(curl);
+
+						if (response == CURLE_OK && !thread_json.empty()) {
+							try {
+								getUrlsFromJson(thread_json);
+							}
+							catch (std::exception& err) {
+								cout << "There was a problem getting the urls from your url after getting the threads." << endl;
+								cout << err.what() << endl;
+							}
+						}
+						else {
+							cout << "Problem encountered proccessing thread : " << threadUrl << endl;
+							cout << error << endl;
+						}
+						thread_json.clear();
+					}
+					curl_easy_reset(curl);
+				}
+			}// !else, board
+			urls.erase(std::remove_if(urls.begin(), urls.end(), removeNonSupported), urls.end());
+			pure_img.insert(pure_img.end(), std::make_move_iterator(urls.begin()), std::make_move_iterator(urls.end()));
+			//move the elements.
+			urls.clear();
+		} // !if
+		else {
+			cout << error << endl;
+			cout << "Encountered a problem with reading your url." << endl;
+		}
+	}
+	else {
+		cout << url << " is not a valid url." << endl;
+	}
+	if (pure_img.size() > options.max_files)
+		pure_img.resize(options.max_files);
+	return pure_img;
 }
 
-void runChanDownloader(string& current_dir) {
 
+
+void ChanDownloader::websiteOptions(Options& opt) {
+	cout << "What is the maximum amount of files wanted?" << endl;
+	int d = check<int>("Invalid input, input only a number", "Your number is too large! Try again.", [](const int& i) { return i <= 10000; });
+	opt.max_files = d;
+
+	cout << "What is the minimum size w/h of files? (0 for none)" << endl;
+	int n = check<int>("Invalid input, input only a number", "Your number cannot contain a negative.", [](const int& i) {return i >= 0; });
+	this->min_size = n;
 }
+
 
 #endif

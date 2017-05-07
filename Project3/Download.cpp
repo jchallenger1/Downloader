@@ -29,7 +29,7 @@ Downloader::~Downloader() {
 	curl_global_cleanup();
 }
 
-inline void Downloader::createFolderPath(string& url) {
+inline void Downloader::createFolderPath(string& url) const {
 	int remove_chars = 0;
 	for (auto cbegin = url.crbegin(); cbegin != url.crend(); cbegin++) {
 		remove_chars++;
@@ -41,7 +41,7 @@ inline void Downloader::createFolderPath(string& url) {
 }
 
 
-string Downloader::createDirectory(string path) {
+string Downloader::createDirectory(string path) const {
 	string end_path(path.begin() + (path.end() - path.begin() - 4), path.end());
 	if (end_path == ".exe")
 		createFolderPath(path);

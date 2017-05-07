@@ -28,7 +28,8 @@ public:
 	Options options;
 	virtual vector<string> getAllImages(string&) = 0;
 	void download(vector<string>&);
-	string createDirectory(string); //creates a directory and modifies the folder_path to the input folder.
+	string createDirectory(string) const; //creates a directory and modifies the folder_path to the input folder.
+	virtual void websiteOptions(Options&) = 0; //options given by each website to adjust.
 protected:
 	/* VARIABLES */
 	string folder_path;
@@ -39,12 +40,12 @@ protected:
 	bool all = false; // checks if the downloader should download all photos on imgur, or only one.
 
 	/* MEMBER FUNCTIONS */
-	void createFolderPath(string&); //creates the string where all photos,gifs,vids are inputted into a folder named by the function.
+	void createFolderPath(string&) const; //creates the string where all photos,gifs,vids are inputted into a folder named by the function.
 	static bool removeNonSupported(const string&);//some posts will have images and post we cannot support, we must get rid of them.
 	virtual vector<std::pair<string, string>> mapUrls(vector<string>&);
 	virtual vector<string> getPureImgUrl(vector<std::pair<string,string>>&);//some posts will direct to a webpage with the img, but here we obtain the pure image file, not the webpage of it.
 	void changeImgToMp4(string&); // changed imgur posts to mp4 extension, needed because .gif and .gifv can sometimes not work as expected.
-	virtual void getUrlsFromJson(string&) = 0; //takes an unparsed json and gets the urls from it which points to the images or some random post we don't want.
+	virtual void getUrlsFromJson(const string&) = 0; //takes an unparsed json and gets the urls from it which points to the images or some random post we don't want.
 	virtual bool validate(const string&) = 0; //validates the url to make sure it is a reddit/4chan/imgur url.
 };
 
@@ -56,16 +57,12 @@ public:
 	using Downloader::Downloader;
 	virtual vector<string> getAllImages(string&) override;
 private:
-	void nextPage(string&,string&);
-	void appendJsonString(string&);
-	virtual void getUrlsFromJson(string&) override;
+	void nextPage(string&,string&) const;
+	void appendJsonString(string&) const;
+	virtual void getUrlsFromJson(const string&) override;
 	virtual bool validate(const string&) override;
+	virtual void websiteOptions(Options&) override;
 };
-extern void redditOptions(Options&);
-
-extern void runRedditDownloader(string& imgur_auth, string& curr_direct);
-
-
 
 
 
@@ -75,16 +72,14 @@ public:
 	virtual vector<string> getAllImages(string&) override;
 private:
 	string chan_sub;
-	vector<string> processThread(const string&);
-	void getChanSub(const string&);
+	int min_size = 0;
+	virtual void getUrlsFromJson(const string&) override;
 	virtual bool validate(const string&) override;
-	void appendJsonString(string&);
+	virtual void websiteOptions(Options&) override;
+	void appendJsonString(string&) const;
+	void getChanSub(const string&);
+	vector<string> getThreads(const string&, const string&);
 };
-extern void runChanDownloader(string&);
-
-extern bool chanOptions(Options&);
-
-
 
 
 class ImgurDownloader : public Downloader {

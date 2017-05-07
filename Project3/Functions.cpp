@@ -79,3 +79,51 @@ bool runMainOptions(Options& opt) {
 	}
 	return create_new;
 }
+
+void runMainProgram(const string& directory, Downloader& website_downloader) {//website_downloader's options must have near nothing!
+	bool new_dir = false;//runMainOptions(website_downloader.options);
+	website_downloader.websiteOptions(website_downloader.options);
+	if (new_dir)
+		website_downloader.options.current_path = website_downloader.createDirectory(directory);
+	while (true) {
+		string input;
+		cout << "Enter a link to download, otherwise enter quit to exit." << endl;
+		cin.ignore();
+		getline(cin, input);
+		if (input == "quit") {
+			break;
+		}
+		else {
+			vector<string> urls = website_downloader.getAllImages(input);
+			if (urls.size() != 0) {
+				cout << "You are downloading " << urls.size() << " files, do you want to continue (y/n)?" << endl;
+				char amt = check<char>("Invalid input, (y) to continue, (n) to quit download; downloading : " + std::to_string(urls.size())
+					+ " files", "Only input (y)es or (n)o", yesOrNo);
+				if (amt == 'y') {
+					website_downloader.download(urls);
+					cout << "--Work finished--" << endl;
+				}
+				else {
+					cout << "Do you want to reduce amount of files downloaded (y), or quit completely(n)?" << endl;
+					char reduce = check<char>("Invalid input, (y) to reduce, (n) to quit", "Enter (y/n)", yesOrNo);
+					if (reduce == 'y') {
+						cout << "Enter amount of files, must be less than the original amount." << endl;
+						int file_count = check<int>("Input only a number.", "The number must be less than" + std::to_string(urls.size()),
+							[&urls](const int& i) ->bool { return i < urls.size(); });
+						urls.resize(file_count);
+						website_downloader.download(urls);
+					}
+				}
+			}
+			else {
+				cout << "There was no media to download, make sure the link is a subreddit url and DOES contain media. \nurl recieved : " << input << endl;
+			}
+			cout << "Enter new options? (y/n)" << endl;
+			char new_opts = check<char>("Invalid input, (y/n) for new options", "Only input (y)es or (n)o for new options", yesOrNo);
+			if (new_opts == 'y') {
+				website_downloader.websiteOptions(website_downloader.options);
+			}
+		}
+
+	}
+}

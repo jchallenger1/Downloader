@@ -6,8 +6,9 @@
 #include "Download.h"
 using std::string; using std::cin; using std::cout;
 //the TI is the expected type returned from the function.
-template<typename TI, typename F>
-TI check(const string& error_message, const string& message, F fx) {//checking inputs recieved, if the stream is good and if they match what characters were wanted.
+template<typename TI, typename F = std::function<bool()> >
+TI check(const string& error_message, const string& message, F fx = std::function<bool()>([]()->bool {return true; })) {
+	//checking inputs recieved, if the stream is good and if they match what characters were wanted.
 	TI x;
 	while (cin.good()) {
 		cin >> x;
@@ -34,8 +35,9 @@ TI check(const string& error_message, const string& message, F fx) {//checking i
 	return TI();// return empty object if function fails
 }
 
-template<typename TI, typename F>
-TI checkGetLine(const string& error_message, const string& message, F fx) {//checking inputs recieved, if the stream is good and if they match what characters were wanted.
+template<typename TI, typename F = std::function<bool()> >
+TI checkGetLine(const string& error_message, const string& message, F fx = std::function<bool()>([]()->bool {return true; })) {
+	//checking inputs recieved, if the stream is good and if they match what characters were wanted with getline.
 	TI x;
 	while (cin.good()) {
 		getline(cin, x);
@@ -71,6 +73,8 @@ extern int getFileSize(const string&);
 extern std::function<bool(const char&)> yesOrNo;
 
 extern bool runMainOptions(Options&);
+
+extern void runMainProgram(const string&, Downloader&);
 
 #endif // !FUNCTIONS
 
