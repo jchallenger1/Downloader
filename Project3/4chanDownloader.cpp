@@ -89,20 +89,25 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 
 	vector<string> pure_img;
 	if (validate(url)) {
-
 		appendJsonString(url);
+
 		string pure_chan_json;
 		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &pure_chan_json);
 		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+		curl_slist* header_list = nullptr;
+		header_list = curl_slist_append(header_list, "User-Agent: 0"); //4chan will otherwise not allow access.
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
+
 		auto response = curl_easy_perform(curl);
 		curl_easy_reset(curl);
-		cout << pure_chan_json << endl;
+
 		if (response == CURLE_OK && !pure_chan_json.empty()) {
 			getChanSub(url);
 			if (std::regex_search(url, std::smatch(), std::regex("thread"))) { // if its a single thread
 				try {
+					Sleep(1950);
 					getUrlsFromJson(url);
 				}
 				catch (std::exception& err) {
@@ -117,9 +122,12 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 					curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
 					curl_easy_setopt(curl, CURLOPT_WRITEDATA, &thread_json);
 					curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+					curl_slist* header_list = nullptr;
+					header_list = curl_slist_append(header_list, "User-Agent: 0");
+					curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
 
 					for (string& threadUrl : newThreads) {
-						Sleep(2000);
+						Sleep(2000); // respecting 4chan API's rules.
 						appendJsonString(threadUrl);
 						curl_easy_setopt(curl, CURLOPT_URL, threadUrl.c_str());
 						response = curl_easy_perform(curl);
@@ -167,7 +175,7 @@ void ChanDownloader::websiteOptions(Options& opt) {
 	int d = check<int>("Invalid input, input only a number", "Your number is too large! Try again.", [](const int& i) { return i <= 10000; });
 	opt.max_files = d;
 
-	cout << "What is the minimum size w/h of files? (0 for none)" << endl;
+	cout << "What is the minimum size w/h of files? (0 for no limit)\nNote : this number represents the mininum for both width and height." << endl;
 	int n = check<int>("Invalid input, input only a number", "Your number cannot contain a negative.", [](const int& i) {return i >= 0; });
 	this->min_size = n;
 }
