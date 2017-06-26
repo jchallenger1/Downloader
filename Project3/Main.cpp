@@ -6,6 +6,7 @@
 #include "Functions.h"
 using std::string;  using std::endl; using std::cout; 
 
+
 int main(int argc, char ** argv) {
 #if defined(WIN32) || defined(_WIN32) ||defined(__WIN32) || defined(_WIN64)
 	//string imgur_authorization = "";
@@ -15,7 +16,6 @@ int main(int argc, char ** argv) {
 	string imgur_authorization("Authorization: Client-ID " + your_client_id);
 	string current_dir(argv[0]);
 	Options options{ 0,0,"",false,imgur_authorization,"",SKIP,"Your Pics" };
-	cout << "Note - You can copy and paste by right clicking on the window, turning on quick edit and then highlighting and right clicking." << endl;
 	cout << "Choose a downloader, (reddit),(imgur),(4chan),(tumblr)" << endl;
 	string type = check<string>("Invalid input, (reddit), (imgur), (4chan), or (tumblr)","", [](const string& s){
 		return s == "reddit" || s == "imgur" || s == "4chan" || s == "tumblr";
@@ -25,9 +25,16 @@ int main(int argc, char ** argv) {
 		runMainProgram(current_dir,reddit_downloader);
 	}
 	else if (type == "4chan") {
-		cout << "Note : getting images from threads can take a while, 2 seconds between allowed requests." << endl;
+		cout << "Note : getting images from multiple threads can take a while, 2 seconds between each thread." << endl;
 		ChanDownloader chan_downloader(options);
 		runMainProgram(current_dir, chan_downloader);
+	}
+	else if (type == "tumblr") {
+		/*TumblrDownloader tumblr_downloader(options);
+		runMainProgram(current_dir, tumblr_downloader);*/
+		string s("http://lolzpicx.tumblr.com");
+		TumblrDownloader tumblor_downloader(options);
+		tumblor_downloader.getAllImages(s);
 	}
 	else {
 		cout << "Others are not supported (yet), sorry! " << endl;

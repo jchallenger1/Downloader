@@ -12,7 +12,7 @@ enum DuplicateFile {
 
 struct Options {
 	int page_count;//amount of pages will download
-	int max_files; // maximum amount of posts; optional.
+	unsigned int max_files; // maximum amount of posts; optional.
 	string tag; //some posts will have a tag
 	bool all_gallery; //imgur often has a gallery that can consist of 200+ imgs of possibly the same thing, option to turn this off.
 	string imgur_auth;
@@ -82,6 +82,22 @@ private:
 };
 
 
+
+class TumblrDownloader : public Downloader {
+public:
+	using Downloader::Downloader;
+	virtual vector<string> getAllImages(string&) override;
+	virtual void websiteOptions(Options&) override;
+private:
+	string tumblr_auth = "";
+	string pure_url; //the base url without any extensions, 'prefixes' or 'suffixes'.
+	int min_size = 0;
+	virtual void getUrlsFromJson(const string&) override;
+	virtual bool validate(const string&) override;
+	void getPureUrl(const string&);
+	
+};
+
 class ImgurDownloader : public Downloader {
 public:
 	
@@ -92,9 +108,6 @@ private:
 
 
 
-class TumblrDownloader : public Downloader {
-public:
-private:
-};
+
 
 #endif // !DOWNLOADER

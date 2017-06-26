@@ -68,7 +68,7 @@ extern size_t writeJsonData(void *buffer, size_t size, size_t nmemb, void *userp
 
 extern size_t downloadFile(void *buffer, size_t size, size_t nmemb, std::ofstream* userp);
 
-extern int getFileSize(const string&);
+extern long long getFileSize(const string&);
 
 extern std::function<bool(const char&)> yesOrNo;
 

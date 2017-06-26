@@ -15,7 +15,7 @@ size_t downloadFile(void *buffer, size_t size, size_t nmemb, std::ofstream* user
 	return size*nmemb;
 }
 
-int getFileSize(const std::string &fileName) {
+long long getFileSize(const std::string &fileName) {
 	std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 
 	if (!file.is_open()) {
@@ -23,10 +23,9 @@ int getFileSize(const std::string &fileName) {
 	}
 
 	file.seekg(0, std::ios::end);
-	int fileSize = file.tellg();
+	long long fileSize = file.tellg();
 	file.seekg(0, std::ios::beg);
 	file.close();
-
 	return fileSize;
 }
 
@@ -81,7 +80,7 @@ bool runMainOptions(Options& opt) {
 }
 
 void runMainProgram(const string& directory, Downloader& website_downloader) {//website_downloader's options must have near nothing!
-	bool new_dir = false;//runMainOptions(website_downloader.options);
+	bool new_dir = runMainOptions(website_downloader.options);//false;
 	website_downloader.websiteOptions(website_downloader.options);
 	if (new_dir)
 		website_downloader.options.current_path = website_downloader.createDirectory(directory);
@@ -109,7 +108,7 @@ void runMainProgram(const string& directory, Downloader& website_downloader) {//
 					if (reduce == 'y') {
 						cout << "Enter amount of files, must be less than the original amount." << endl;
 						int file_count = check<int>("Input only a number.", "The number must be less than" + std::to_string(urls.size()),
-							[&urls](const int& i) ->bool { return i < urls.size(); });
+							[&urls](const int& i) ->bool { return i < static_cast<int>(urls.size()); });
 						urls.resize(file_count);
 						website_downloader.download(urls);
 					}

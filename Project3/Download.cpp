@@ -71,12 +71,8 @@ bool Downloader::removeNonSupported(const string& url) {
 	catch (std::regex_error err) {
 		cout << err.what() << "\n" << err.code();
 	}
-#ifndef NDEBUG
-	std::cerr << "Error recived url " + url + " in file " << __FILE__ << endl << "In function " << __FUNCTION__ << endl << __TIME__ << endl;
-	assert(0);
-#undef NDEBUG
-#endif
-#pragma warning(suppress:4715)
+	throw std::runtime_error("Function did not pass through try catch statement.");
+	return false;
 } 
 
 
@@ -288,8 +284,7 @@ void Downloader::download(vector<string>& urls) {
 				"url : " << download_urls.first << endl;
 			}
 			else {
-				int size = getFileSize(full_path);
-				if (size == 0) {
+				if (getFileSize(full_path) == 0) {
 					delete_urls.push_back(full_path);
 				}
 			}

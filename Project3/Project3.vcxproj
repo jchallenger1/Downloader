@@ -122,10 +122,18 @@
     <ClCompile Include="Functions.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="RedditDownloader.cpp" />
+    <ClCompile Include="TumblrDownloader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Download.h" />
     <ClInclude Include="Functions.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Project3.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\..\Pictures\Graphicloads-100-Flat-Download-2.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

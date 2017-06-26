@@ -107,7 +107,7 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 			getChanSub(url);
 			if (std::regex_search(url, std::smatch(), std::regex("thread"))) { // if its a single thread
 				try {
-					Sleep(1950);
+					Sleep(1950); // respecting 4chan's rules
 					getUrlsFromJson(url);
 				}
 				catch (std::exception& err) {
@@ -172,11 +172,11 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 
 void ChanDownloader::websiteOptions(Options& opt) {
 	cout << "What is the maximum amount of files wanted?" << endl;
-	int d = check<int>("Invalid input, input only a number", "Your number is too large! Try again.", [](const int& i) { return i <= 10000; });
+	int d = check<int>("Invalid input, input only a number", "Your number is too large! Try again.", [](const int& i) { return i <= 10000 && i >0; });
 	opt.max_files = d;
 
 	cout << "What is the minimum size w/h of files? (0 for no limit)\nNote : this number represents the mininum for both width and height." << endl;
-	int n = check<int>("Invalid input, input only a number", "Your number cannot contain a negative.", [](const int& i) {return i >= 0; });
+	int n = check<int>("Invalid input, input only a number", "Your number cannot contain a negative.", [](const int& i) {return i >= 0 ; });
 	this->min_size = n;
 }
 

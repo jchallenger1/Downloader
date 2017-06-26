@@ -116,9 +116,7 @@ vector<string> RedditDownloader::getAllImages(string& url) {
 		//return vector<string>(image_urls.begin(), image_urls.begin() + options.max_files);
 		image_urls.resize(options.max_files);
 	}
-	else {
-		return image_urls;
-	}
+	return image_urls;
 }
 
 bool RedditDownloader::validate(const string& url) {
@@ -131,11 +129,11 @@ bool RedditDownloader::validate(const string& url) {
 void RedditDownloader::websiteOptions(Options& opt) {
 
 	cout << "How many pages do you want? Max of 50." << endl;
-	int pages = check<int>("Invalid input enter amt of pages 1-50.", "Only numbers between 1-50.", [](const int& i) {return i <= 50; });
+	int pages = check<int>("Invalid input enter amt of pages 1-50.", "Only numbers between 1-50.", [](const int& i) {return i <= 50&& i >0; });
 	opt.page_count = pages;
 
 	cout << "What is the maximum amount of files wanted?" << endl;
-	int d = check<int>("Invalid input, input only a numbers", "Your number is too large! Try again.", [](const int& i) { return i <= 10000; });
+	int d = check<int>("Invalid input, input only a numbers", "Your number is too large or to small! Try again.", [](const int& i) { return i <= 10000 && i >0; });
 	opt.max_files = d;
 
 	cout << "Do you want to gather all images when faced with an entire gallery? (y/n)" << endl;
