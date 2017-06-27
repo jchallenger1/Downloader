@@ -9,6 +9,10 @@
 #include "Download.h"
 #include "Functions.h"
 
+/*
+Note - Tubmlr Api does not provide any information for pages
+       They only provide information based off of singular posts.
+*/
 
 using std::string; using std::vector; using std::cout; using std::endl; using std::flush; 
 
@@ -18,10 +22,13 @@ vector<string> TumblrDownloader::getAllImages(string& raw_url) {
 	if (validate(raw_url)) {
 		/*
 		Limit - The amount of posts in the request
-		Offset - How many posts to move to
+		Offset - How many posts to set/move to
 		*/
-		for (int limit = 0, offset = 0; limit <= options.max_files; 
-			offset +=20, limit+= options.max_files - offset > 20 ? 20 : options.max_files - offset ) {
+		for (int limit = 0, offset = 0; limit <= options.page_count; 
+			offset +=20, limit+= options.page_count - offset > 20 ? 20 : options.page_count - offset ) {
+			if (pure_imgs.size() >= options.max_files) {
+				break;
+			}
 			string url = "https://api.tumblr.com/v2/blog/" + pure_url + "/posts/photo?limit=" +
 				std::to_string(limit) + "&offset=" + std::to_string(offset) + "&api_key=" + tumblr_auth;
 			string json_buffer;
@@ -33,6 +40,9 @@ vector<string> TumblrDownloader::getAllImages(string& raw_url) {
 			curl_easy_reset(curl);
 			if (response == CURLE_OK && !json_buffer.empty()) {
 				getUrlsFromJson(json_buffer);
+				if (urls.empty()) {
+					break;
+				}
 				std::remove_if(urls.begin(), urls.end(), removeNonSupported);
 				std::for_each(urls.begin(), urls.end(), [&pure_imgs](const auto& item) {
 					pure_imgs.push_back(std::move(item));
@@ -50,6 +60,9 @@ vector<string> TumblrDownloader::getAllImages(string& raw_url) {
 	else {
 		cout << raw_url << " is not a valid url" << endl;
 	}
+	if (pure_imgs.size() >= options.max_files) {
+		pure_imgs.resize(options.max_files);
+	}
 	return pure_imgs;
 }
 
@@ -57,17 +70,12 @@ vector<string> TumblrDownloader::getAllImages(string& raw_url) {
 
 bool TumblrDownloader::validate(const string& url) {
 	bool good = false;
-	try {
-		string pattern(".+\\.tumblr.com/?(.+)");
-		std::regex reg(pattern);
-		std::smatch s;
-		bool base = std::regex_search(url,s, std::regex(pattern));
-		bool extension = !s[1].matched;
-		good = base && extension;
-	}
-	catch (std::regex_error& err) {
-		cout << err.what() << endl;
-	}
+	string pattern(".+\\.tumblr.com/?(.+)");
+	std::regex reg(pattern);
+	std::smatch s;
+	bool base = std::regex_search(url,s, std::regex(pattern));
+	bool extension = !s[1].matched;
+	good = base && extension;
 
 	if (!good) { // it might just be a custom hostname
 
@@ -107,13 +115,30 @@ void TumblrDownloader::getPureUrl(const string& url) {
 void TumblrDownloader::getUrlsFromJson(const string& url) {
 	try {
 		jsonp = json::parse(url.c_str());
-		auto all_posts = jsonp["meta"]["posts"];
-		for (auto& single : all_posts) {
-			auto photo_obj = single["photos"][0]["original_size"];
-			if (min_size <= photo_obj.value("width", 0) && min_size <= photo_obj.value("height", 0)) {
-				urls.push_back(photo_obj["url"]);
+		auto all_posts = jsonp["response"]["posts"];
+		for (auto& single_post : all_posts) {
+			if (!options.tag.empty()) {
+				if (!hasCorrectTag(single_post["tags"])) {
+					continue;
+				}
 			}
-		}
+			if (options.all_gallery) {
+				for (auto& photos : single_post["photos"]) {
+					std::pair<int, int> dimensions({ photos["original_size"]["width"],photos["original_size"]["height"] });
+					if (min_size <= dimensions.first && min_size <= dimensions.second) {
+						string img_url = photos["original_size"]["url"];
+						urls.push_back(img_url);
+					}
+				}
+			}
+			else {
+				std::pair<int, int> dimensions({ single_post["photos"][0]["original_size"]["width"],single_post["photos"][0]["original_size"]["height"] });
+				if (min_size <= dimensions.first && min_size <= dimensions.second) {
+					urls.push_back(single_post["photos"][0]["original_size"]["url"]);
+				}
+			}
+			
+		} // !for
 	}
 	catch (std::exception& err) {
 		cout << err.what() << endl;
@@ -121,8 +146,46 @@ void TumblrDownloader::getUrlsFromJson(const string& url) {
 	
 }
 
+template<typename T>
+bool TumblrDownloader::hasCorrectTag(T& tags) const{
+	bool hasTag = false;
+	for (auto& t : tags) {
+		if (options.tag == t)
+			hasTag = true;
+	}
+	return hasTag;
+}
 
 void TumblrDownloader::websiteOptions(Options& options) {
+	cout << "How many posts should be searched? (NOT PAGES!)" << endl;
+	options.page_count = check<int>("Only enter numbers", "Number has to be atleast 0, less than 10000", [](const int& i) {
+		return i >= 0 && i <= 10000;
+	});
 
+	cout << "What is the maximum amount of media downloaded?" << endl;
+	options.max_files = check<int>("Only enter numbers", "Number has to be greater than 0", [](const int& i) {
+		return i >= 0;
+	});
+
+	cout << "What is the minimum dimension of the media required?(Enter 0 for none)" << endl;
+	this->min_size = check<int>("Only enter numbers", "Number has to be atleast 0", [](const int& i) {
+		return i >= 0;
+	});
+
+	cout << "Do you want to search for a specific tag(y/n)?" << endl;
+	char search = check<char>("Only enter a character", "Enter (y) for yes, (n) for no", yesOrNo);
+	if (search == 'y') {
+		while (true) {
+			cout << "Enter your tag" << endl;
+			string input = checkGetLine<string>("", "");
+			std::cin.ignore();
+			cout << "Your entered tag is '" << input << "'\nIs this correct(y/n)?" << endl;
+			char good = check<char>("Only enter characters", "Enter (y) for yes, (n) for no", yesOrNo);
+			if (good == 'y') {
+				options.tag = input;
+				break;
+			}
+		}
+	}
 }
 #endif

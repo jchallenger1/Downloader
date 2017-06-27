@@ -95,6 +95,8 @@ private:
 	virtual void getUrlsFromJson(const string&) override;
 	virtual bool validate(const string&) override;
 	void getPureUrl(const string&);
+	template<typename T>
+	bool hasCorrectTag(T&) const;
 	
 };
 

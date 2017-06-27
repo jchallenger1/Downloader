@@ -79,7 +79,7 @@ bool runMainOptions(Options& opt) {
 	return create_new;
 }
 
-void runMainProgram(const string& directory, Downloader& website_downloader) {//website_downloader's options must have near nothing!
+void runMainProgram(const string& directory, Downloader& website_downloader) {
 	bool new_dir = runMainOptions(website_downloader.options);//false;
 	website_downloader.websiteOptions(website_downloader.options);
 	if (new_dir)

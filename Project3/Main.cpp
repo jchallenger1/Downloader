@@ -30,14 +30,12 @@ int main(int argc, char ** argv) {
 		runMainProgram(current_dir, chan_downloader);
 	}
 	else if (type == "tumblr") {
-		/*TumblrDownloader tumblr_downloader(options);
-		runMainProgram(current_dir, tumblr_downloader);*/
-		string s("http://lolzpicx.tumblr.com");
-		TumblrDownloader tumblor_downloader(options);
-		tumblor_downloader.getAllImages(s);
+		TumblrDownloader tumblr_downloader(options);
+		runMainProgram(current_dir, tumblr_downloader);
 	}
-	else {
-		cout << "Others are not supported (yet), sorry! " << endl;
+	else if (type == "imgur") {
+		//ImgurDownloader imgur_downloader(options);
+		//runMainProgram(current_dir, imgur_downloader);
 	}
 	system("pause");
 	return 0;
