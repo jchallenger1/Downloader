@@ -11,7 +11,6 @@ int main(int argc, char ** argv) {
 #if defined(WIN32) || defined(_WIN32) ||defined(__WIN32) || defined(_WIN64)
 	//string imgur_authorization = "";
 	//Options dev_options{ 1,3000,"",false, imgur_authorization ,string("") ,CREATENEW,"New folder"};
-	//ChanDownloader a(dev_options);
 	string your_client_id("");
 	string imgur_authorization("Authorization: Client-ID " + your_client_id);
 	string current_dir(argv[0]);
@@ -34,8 +33,8 @@ int main(int argc, char ** argv) {
 		runMainProgram(current_dir, tumblr_downloader);
 	}
 	else if (type == "imgur") {
-		//ImgurDownloader imgur_downloader(options);
-		//runMainProgram(current_dir, imgur_downloader);
+		ImgurDownloader imgur_downloader(options);
+		runMainProgram(current_dir, imgur_downloader);
 	}
 	system("pause");
 	return 0;

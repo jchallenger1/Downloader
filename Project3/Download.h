@@ -102,9 +102,15 @@ private:
 
 class ImgurDownloader : public Downloader {
 public:
-	
+	using Downloader::Downloader;
+	virtual vector<string> getAllImages(string&) override;
+	virtual void websiteOptions(Options&) override;
+	int min_size = 0;
 private:
-	
+	string query_string;
+	virtual void getUrlsFromJson(const string&) override;
+	virtual bool validate(const string&) override;
+	void getQueryString(const string&);
 };
 
 

@@ -120,6 +120,7 @@
     <ClCompile Include="4chanDownloader.cpp" />
     <ClCompile Include="Download.cpp" />
     <ClCompile Include="Functions.cpp" />
+    <ClCompile Include="ImgurDownloader.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="RedditDownloader.cpp" />
     <ClCompile Include="TumblrDownloader.cpp" />
