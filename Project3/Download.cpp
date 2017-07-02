@@ -65,7 +65,7 @@ bool Downloader::removeNonSupported(const string& url) {
 		std::smatch sm;
 		bool pat = std::regex_search(url, sm, gfycat_regex);
 		std::smatch gfycat_matched = sm;
-		return !(std::regex_search(url, sm, reddit_regex) || std::regex_search(url, sm, imgur_regex) || 
+		return !(std::regex_search(url, sm, reddit_regex) || std::regex_search(url, sm, imgur_regex) ||
 			std::regex_search(url, sm, chan_regex) || std::regex_search(url, sm, tumblr_regex) || (pat && !gfycat_matched[1].matched));
 	}
 	catch (std::regex_error err) {
@@ -73,32 +73,28 @@ bool Downloader::removeNonSupported(const string& url) {
 	}
 	throw std::runtime_error("Function did not pass through try catch statement.");
 	return false;
-} 
+}
 
 
 vector < std::pair<string, string>> Downloader::mapUrls(vector<string>& unmaped_urls) {
 	vector<std::pair<string, string>> mapped_urls; //first string is the url, the second is the identification
 	string imgur_pattern("(i\\.)?imgur.com/(gallery/)?(a/)?(.+\\.)?"), gfycat_pattern("gfycat.com/(.+/)?"); //matches the wrong, not the right.
 	for (const string& unmapped_url : unmaped_urls) {
-		try {
-			std::regex img_reg(imgur_pattern), gf_reg(gfycat_pattern);
-			std::smatch img_sm, gf_sm;
-			if (std::regex_search(unmapped_url, img_sm, img_reg) && !img_sm[1].matched) {
-				if (img_sm[2].matched || img_sm[3].matched)
-					mapped_urls.emplace_back(std::make_pair(unmapped_url, "imgurGALLERY"));
-				else if (img_sm[4].matched)
-					mapped_urls.emplace_back(std::make_pair(unmapped_url, "imgurPOST"));
-			}
-			else if (std::regex_search(unmapped_url, gf_sm, gf_reg)) {
-				mapped_urls.emplace_back(std::make_pair(unmapped_url, "gfycat"));
-			}
-			else {
-				mapped_urls.emplace_back(std::make_pair(unmapped_url, "GOOD"));
-			}
+		std::regex img_reg(imgur_pattern), gf_reg(gfycat_pattern);
+		std::smatch img_sm, gf_sm;
+		if (std::regex_search(unmapped_url, img_sm, img_reg) && !img_sm[1].matched) {
+			if (img_sm[2].matched || img_sm[3].matched)
+				mapped_urls.emplace_back(std::make_pair(unmapped_url, "imgurGALLERY"));
+			else if (img_sm[4].matched)
+				mapped_urls.emplace_back(std::make_pair(unmapped_url, "imgurPOST"));
 		}
-		catch (std::regex_error err) {
-			cout << err.what() << endl;
+		else if (std::regex_search(unmapped_url, gf_sm, gf_reg)) {
+			mapped_urls.emplace_back(std::make_pair(unmapped_url, "gfycat"));
 		}
+		else {
+			mapped_urls.emplace_back(std::make_pair(unmapped_url, "GOOD"));
+		}
+
 	}
 
 	return mapped_urls;
@@ -139,16 +135,16 @@ vector<string> Downloader::getPureImgUrl(vector<std::pair<string, string>>& mapp
 							begin++;
 						}
 					}
-				
+
 				}
 				else {
 					cout << error << endl;
 				}
 				mapped_url = std::make_pair("DELETE", "");
-				
+
 			}
 			else if (mapped_url.second == "imgurPOST") {
-				auto back_slash = std::find(mapped_url.first.rbegin(), mapped_url.first.rend() ,'/');
+				auto back_slash = std::find(mapped_url.first.rbegin(), mapped_url.first.rend(), '/');
 				string query_string(mapped_url.first.rbegin(), back_slash);
 				std::reverse(query_string.begin(), query_string.end());// Find everything from the end of the query string
 				auto dot = std::find(query_string.begin(), query_string.end(), '.');
@@ -156,8 +152,8 @@ vector<string> Downloader::getPureImgUrl(vector<std::pair<string, string>>& mapp
 					query_string = string(query_string.begin(), dot);
 				}
 				string request = "https://api.imgur.com/3/image/" + query_string;
-			
-				curl_easy_setopt(curl, CURLOPT_URL, request.c_str() );
+
+				curl_easy_setopt(curl, CURLOPT_URL, request.c_str());
 				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
 				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json_data);
 				curl_slist* header_list = nullptr;
@@ -182,7 +178,7 @@ vector<string> Downloader::getPureImgUrl(vector<std::pair<string, string>>& mapp
 				else {
 					cout << error << endl;
 				}
-			
+
 				mapped_url = std::make_pair("DELETE", "");
 			}
 			else if (mapped_url.second == "gfycat") {
@@ -204,7 +200,7 @@ vector<string> Downloader::getPureImgUrl(vector<std::pair<string, string>>& mapp
 						if (gfy_info.find("mp4Url") != gfy_info.end()) {
 							newUrls.push_back(gfy_info["mp4Url"]);
 						}
-						else if (gfy_info.find("gifUrl") != gfy_info.end()){
+						else if (gfy_info.find("gifUrl") != gfy_info.end()) {
 							newUrls.push_back(gfy_info["gifUrl"]);
 						}
 					}
@@ -215,11 +211,11 @@ vector<string> Downloader::getPureImgUrl(vector<std::pair<string, string>>& mapp
 				else {
 					cout << error << endl;
 				}
-				
+
 			} // !else if
-			mapped_url = std::make_pair("","DELETE");
+			mapped_url = std::make_pair("", "DELETE");
 		}// !if GOOD
-		
+
 	} // !for loop
 	return newUrls;
 }// !getPureImgUrl
@@ -229,22 +225,32 @@ void Downloader::changeImgToMp4(string& imgur_url) {
 	if (dot != imgur_url.rend() && (dot - imgur_url.rbegin()) < 5) {
 		string extension(dot.base(), imgur_url.end());
 		if (extension == "gif" || extension == "gifv") {
-			imgur_url.erase(dot.base(),imgur_url.end());
+			imgur_url.erase(dot.base(), imgur_url.end());
 			imgur_url.append("mp4");
 		}
 	}
 }
 
-void Downloader::download(vector<string>& urls) {
-	vector<std::pair<string,string>> extensions;//first string is url, second is name and extension.
-	vector<string> delete_urls;
+void Downloader::getFileNames(const vector<string>& single_url, vector<std::pair<string, string>>& output) const noexcept {
 	for (auto begin = urls.begin(); begin != urls.end(); begin++) {
 		auto back_slash = std::find(begin->rbegin(), begin->rend(), '/');
 		string name(begin->rbegin(), back_slash);
 		std::reverse(name.begin(), name.end());
-		extensions.push_back(std::make_pair(std::move(*begin),name));
+		output.push_back(std::make_pair(std::move(*begin), name));
 	}
-	urls.clear();
+	for (auto& pair : output) { //remove tumblr if its there.
+		if (string(pair.second.begin(), pair.second.begin() + 6) == "tumblr") {
+			auto iter = std::find(pair.second.begin(), pair.second.end(), '_') + 1;
+			pair.second = string(iter, pair.second.end());
+		}
+	}
+}
+
+void Downloader::download() {
+	vector<std::pair<string, string>> extensions;//first string is url, second is name and extension.
+	extensions.reserve(urls.size());
+	vector<string> delete_urls;
+	getFileNames(urls, extensions);
 
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &downloadFile);
 	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
@@ -255,15 +261,16 @@ void Downloader::download(vector<string>& urls) {
 
 		if (!(options.duplicate_file == SKIP && img_exists)) {
 			string full_path;
-			if (options.duplicate_file == CREATENEW && img_exists) {
+			if (options.duplicate_file == CREATENEW && img_exists) { 
+				// adds a number to indicate the nth copy; sdp.jpg(2).
 				int new_duplicate = 2;
-				auto dot = std::find(download_urls.second.cbegin(), download_urls.second.cend(),'.');
+				auto dot = std::find(download_urls.second.cbegin(), download_urls.second.cend(), '.');
 				string ext(dot, download_urls.second.cend());
 				string name(download_urls.second.cbegin(), dot);
-				full_path = options.current_path + "\\"+name + " (" + std::to_string(new_duplicate) + ")" + ext;
+				full_path = options.current_path + "\\" + name + " (" + std::to_string(new_duplicate) + ")" + ext;
 				std::experimental::filesystem::path duplicate_image_path(full_path);
 				bool duplicate_img_exists = std::experimental::filesystem::exists(duplicate_image_path);
-				while (!duplicate_img_exists) {
+				while (!duplicate_img_exists) { // makes sure the largest number is used that is not already in the folder.
 					new_duplicate++;
 					full_path = options.current_path + "\\" + name + " (" + std::to_string(new_duplicate) + ")" + ext;
 					duplicate_image_path = std::experimental::filesystem::path(full_path);
@@ -273,18 +280,20 @@ void Downloader::download(vector<string>& urls) {
 			else {
 				full_path = options.current_path + img_name;
 			}
-			std::ofstream ofs(full_path,std::ios::binary);
+			//Uses the paths to download the images.
+			std::ofstream ofs(full_path, std::ios::binary); 
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ofs);
 			curl_easy_setopt(curl, CURLOPT_URL, download_urls.first.c_str());
 			auto response = curl_easy_perform(curl);
+
 			if (!(response == CURLE_OK || ofs)) {
 				delete_urls.push_back(full_path);
 				cout << error << endl;
 				cout << "Problem downloading file : " << download_urls.second << "\n" <<
-				"url : " << download_urls.first << endl;
+					"url : " << download_urls.first << endl;
 			}
 			else {
-				if (getFileSize(full_path) == 0) {
+				if (getFileSize(full_path) == 0) { // checks to see if the downloading failed; 0 bytes in file.
 					delete_urls.push_back(full_path);
 				}
 			}

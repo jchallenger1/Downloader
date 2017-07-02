@@ -15,14 +15,14 @@
 using std::string; using std::cin; using std::cout; using std::endl; using json = nlohmann::json;
 
 
-void ChanDownloader::getUrlsFromJson(const string& json_data) {
+void ChanDownloader::getUrlsFromJson(const string& json_data, vector<string>& output) {
 	jsonp = json::parse(json_data.c_str());
 	for (auto post_begin = jsonp["posts"].begin(); post_begin != jsonp["posts"].end(); post_begin++) {
 		if (post_begin->find("w") != post_begin->end() && post_begin->find("h") != post_begin->end()
 			&& post_begin->find("tim") != post_begin->end() && post_begin->find("ext") != post_begin->end()) { //making sure the post has media and not just a comment
 
 			if (min_size < post_begin->value("w", 0) && min_size < post_begin->value("h", 0)) {
-				urls.push_back("http://i.4cdn.org/" + chan_sub + "/" +
+				output.push_back("http://i.4cdn.org/" + chan_sub + "/" +
 					std::to_string(post_begin->value("tim", unsigned long long int(0))) + post_begin->value("ext", ""));
 			}
 
@@ -78,16 +78,21 @@ bool ChanDownloader::validate(const string& url) {
 	return good;
 }
 
-vector<string> ChanDownloader::getAllImages(string& url) {
-	string base_url = url; //used to create multiple requests on the main board thats requested
-	string::iterator iter = base_url.end() - 1, delete_iter = base_url.end() - 1;
+inline string ChanDownloader::getBaseUrl(const string& url) const {
+	string return_url = url;
+	string::iterator iter = return_url.end() - 1, delete_iter = return_url.end() - 1;
 	while (isdigit(*iter)) {
 		delete_iter = iter--;
 	}
 	if (delete_iter != iter)
-		base_url.erase(delete_iter, base_url.end()); //erase the number at the end if there is one.
+		return_url.erase(delete_iter, return_url.end()); //erase the number at the end if there is one.
+	return return_url;
+}
 
-	vector<string> pure_img;
+void ChanDownloader::getAllImages(string& url) {
+	string base_url = getBaseUrl(url); //used to create multiple requests on the main board thats requested
+	
+	
 	if (validate(url)) {
 		appendJsonString(url);
 
@@ -103,12 +108,13 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 		auto response = curl_easy_perform(curl);
 		curl_easy_reset(curl);
 
+		
 		if (response == CURLE_OK && !pure_chan_json.empty()) {
 			getChanSub(url);
 			if (std::regex_search(url, std::smatch(), std::regex("thread"))) { // if its a single thread
 				try {
 					Sleep(1950); // respecting 4chan's rules
-					getUrlsFromJson(url);
+					getUrlsFromJson(pure_chan_json,urls);
 				}
 				catch (std::exception& err) {
 					cout << "There was a problem getting the urls from your url." << endl;
@@ -116,6 +122,7 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 				}
 			}
 			else { //if its an entire board
+				vector<string> pure_img;
 				vector<string> newThreads = getThreads(pure_chan_json, base_url);
 				if (!newThreads.empty()) { //newThread might have thrown an exception
 					string thread_json;
@@ -134,7 +141,7 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 
 						if (response == CURLE_OK && !thread_json.empty()) {
 							try {
-								getUrlsFromJson(thread_json);
+								getUrlsFromJson(thread_json,urls);
 							}
 							catch (std::exception& err) {
 								cout << "There was a problem getting the urls from your url after getting the threads." << endl;
@@ -151,9 +158,7 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 				}
 			}// !else, board
 			urls.erase(std::remove_if(urls.begin(), urls.end(), removeNonSupported), urls.end());
-			pure_img.insert(pure_img.end(), std::make_move_iterator(urls.begin()), std::make_move_iterator(urls.end()));
-			//move the elements.
-			urls.clear();
+
 		} // !if
 		else {
 			cout << error << endl;
@@ -163,9 +168,9 @@ vector<string> ChanDownloader::getAllImages(string& url) {
 	else {
 		cout << url << " is not a valid url." << endl;
 	}
-	if (pure_img.size() > options.max_files)
-		pure_img.resize(options.max_files);
-	return pure_img;
+	if (urls.size() > options.max_files)
+		urls.resize(options.max_files);
+
 }
 
 
@@ -175,7 +180,7 @@ void ChanDownloader::websiteOptions(Options& opt) {
 	int d = check<int>("Invalid input, input only a number", "Your number is too large! Try again.", [](const int& i) { return i <= 10000 && i >0; });
 	opt.max_files = d;
 
-	cout << "What is the minimum size w/h of files? (0 for no limit)\nNote : this number represents the mininum for both width and height." << endl;
+	cout << "What is the minimum size w/h of files? (0 for no limit)" << endl;
 	int n = check<int>("Invalid input, input only a number", "Your number cannot contain a negative.", [](const int& i) {return i >= 0 ; });
 	this->min_size = n;
 }

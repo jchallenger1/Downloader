@@ -1,6 +1,8 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
+#include <thread>
+#include <chrono>
 #include <curl\curl.h>
 #include "Download.h"
 #include "Functions.h"
@@ -11,7 +13,7 @@ int main(int argc, char ** argv) {
 #if defined(WIN32) || defined(_WIN32) ||defined(__WIN32) || defined(_WIN64)
 	//string imgur_authorization = "";
 	//Options dev_options{ 1,3000,"",false, imgur_authorization ,string("") ,CREATENEW,"New folder"};
-	string your_client_id("");
+	string your_client_id("b56bd55f8d0bfd4");
 	string imgur_authorization("Authorization: Client-ID " + your_client_id);
 	string current_dir(argv[0]);
 	Options options{ 0,0,"",false,imgur_authorization,"",SKIP,"Your Pics" };
@@ -36,7 +38,8 @@ int main(int argc, char ** argv) {
 		ImgurDownloader imgur_downloader(options);
 		runMainProgram(current_dir, imgur_downloader);
 	}
-	system("pause");
+	cout << "Program exiting in 30 seconds" << endl;
+	std::this_thread::sleep_for(std::chrono::seconds(30));
 	return 0;
 #else
 	std::cerr << "Sorry your OS is not supported!\n Press Enter to exit." << endl;

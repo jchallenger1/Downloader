@@ -16,8 +16,8 @@ Note - Tubmlr Api does not provide any information for pages
 
 using std::string; using std::vector; using std::cout; using std::endl; using std::flush; 
 
-vector<string> TumblrDownloader::getAllImages(string& raw_url) {
-	vector<string> pure_imgs;
+void TumblrDownloader::getAllImages(string& raw_url) {
+	
 	getPureUrl(raw_url);
 	if (validate(raw_url)) {
 		/*
@@ -25,10 +25,12 @@ vector<string> TumblrDownloader::getAllImages(string& raw_url) {
 		Offset - How many posts to set/move to
 		*/
 		for (int limit = 0, offset = 0; limit <= options.page_count; 
-			offset +=20, limit+= options.page_count - offset > 20 ? 20 : options.page_count - offset ) {
-			if (pure_imgs.size() >= options.max_files) {
+			offset +=20, limit+= options.page_count - offset > 20 ? 20 : options.page_count - offset ) {// until we've requested for all images
+			vector<string> pure_imgs;
+			if (urls.size() >= options.max_files) {
 				break;
 			}
+
 			string url = "https://api.tumblr.com/v2/blog/" + pure_url + "/posts/photo?limit=" +
 				std::to_string(limit) + "&offset=" + std::to_string(offset) + "&api_key=" + tumblr_auth;
 			string json_buffer;
@@ -38,16 +40,17 @@ vector<string> TumblrDownloader::getAllImages(string& raw_url) {
 			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
 			auto response = curl_easy_perform(curl);
 			curl_easy_reset(curl);
+
 			if (response == CURLE_OK && !json_buffer.empty()) {
-				getUrlsFromJson(json_buffer);
-				if (urls.empty()) {
+				getUrlsFromJson(json_buffer, pure_imgs);
+				if (pure_imgs.empty()) {
 					break;
 				}
-				std::remove_if(urls.begin(), urls.end(), removeNonSupported);
-				std::for_each(urls.begin(), urls.end(), [&pure_imgs](const auto& item) {
-					pure_imgs.push_back(std::move(item));
+				std::remove_if(pure_imgs.begin(), pure_imgs.end(), removeNonSupported);
+				std::for_each(pure_imgs.begin(), pure_imgs.end(), [this](const auto& item) {
+					urls.push_back(std::move(item));
 				});
-				urls.clear();
+
 			}
 			else {
 				cout << "There was a problem getting the images" << endl;
@@ -55,15 +58,15 @@ vector<string> TumblrDownloader::getAllImages(string& raw_url) {
 				break;
 			}
 
-		}
+		} // !for 
 	}
 	else {
 		cout << raw_url << " is not a valid url" << endl;
 	}
-	if (pure_imgs.size() >= options.max_files) {
-		pure_imgs.resize(options.max_files);
+	if (urls.size() >= options.max_files) {
+		urls.resize(options.max_files);
 	}
-	return pure_imgs;
+
 }
 
 
@@ -112,7 +115,7 @@ void TumblrDownloader::getPureUrl(const string& url) {
 		pure_url.pop_back();
 }
 
-void TumblrDownloader::getUrlsFromJson(const string& url) {
+void TumblrDownloader::getUrlsFromJson(const string& url,vector<string>& output) {
 	try {
 		jsonp = json::parse(url.c_str());
 		auto all_posts = jsonp["response"]["posts"];
@@ -127,14 +130,14 @@ void TumblrDownloader::getUrlsFromJson(const string& url) {
 					std::pair<int, int> dimensions({ photos["original_size"]["width"],photos["original_size"]["height"] });
 					if (min_size <= dimensions.first && min_size <= dimensions.second) {
 						string img_url = photos["original_size"]["url"];
-						urls.push_back(img_url);
+						output.push_back(img_url);
 					}
 				}
 			}
 			else {
 				std::pair<int, int> dimensions({ single_post["photos"][0]["original_size"]["width"],single_post["photos"][0]["original_size"]["height"] });
 				if (min_size <= dimensions.first && min_size <= dimensions.second) {
-					urls.push_back(single_post["photos"][0]["original_size"]["url"]);
+					output.push_back(single_post["photos"][0]["original_size"]["url"]);
 				}
 			}
 			
@@ -171,6 +174,9 @@ void TumblrDownloader::websiteOptions(Options& options) {
 	this->min_size = check<int>("Only enter numbers", "Number has to be atleast 0", [](const int& i) {
 		return i >= 0;
 	});
+
+	cout << "Do you want all images in a single post (1), or just one (2)?" << endl;
+	this->options.all_gallery = check<int>("Only enter numbers", "Number has to be 1 or 2", [](const int& i) {return i == 1 || i == 2; });
 
 	cout << "Do you want to search for a specific tag(y/n)?" << endl;
 	char search = check<char>("Only enter a character", "Enter (y) for yes, (n) for no", yesOrNo);

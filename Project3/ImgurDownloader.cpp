@@ -9,8 +9,7 @@
 
 using std::cout; using std::endl; using std::vector;
 
-vector<string> ImgurDownloader::getAllImages(string& raw_url) {
-	vector<string> pure_imgs;
+void ImgurDownloader::getAllImages(string& raw_url) {
 	getQueryString(raw_url);
 	if (validate(raw_url)) {
 		string url("https://api.imgur.com/3/album/" + this->query_string);
@@ -27,16 +26,13 @@ vector<string> ImgurDownloader::getAllImages(string& raw_url) {
 		curl_easy_reset(curl);
 
 		if (response == CURLE_OK && !json_buffer.empty()) {
-			getUrlsFromJson(json_buffer);
+			getUrlsFromJson(json_buffer,urls);
 			if (!urls.empty()) {
 				std::for_each(urls.begin(), urls.end(), removeNonSupported);
 				std::for_each(urls.begin(), urls.end(), [this](string& st) {
 					changeImgToMp4(st);
 				});
-				std::for_each(urls.begin(), urls.end(), [&pure_imgs](const string& s) {
-					pure_imgs.push_back(std::move(s));
-				});
-				urls.clear();
+
 			}
 			else {
 				cout << "There was a problem parsing the data " << endl;
@@ -50,20 +46,20 @@ vector<string> ImgurDownloader::getAllImages(string& raw_url) {
 	else {
 		cout << raw_url << " is not a valid url." << endl;
 	}
-	if (options.max_files <= pure_imgs.size()) {
-		pure_imgs.resize(options.max_files);
+	if (options.max_files <= urls.size()) {
+		urls.resize(options.max_files);
 	}
-	return pure_imgs;
+
 }
 
 
-void ImgurDownloader::getUrlsFromJson(const string& buffer) {
+void ImgurDownloader::getUrlsFromJson(const string& buffer,vector<string>& output) {
 	try {
 		jsonp = json::parse(buffer.c_str());
 		if (jsonp["success"]) {
 			for (auto& image : jsonp["data"]["images"]) {
 				if (min_size <= image.value("width",0) && min_size <= image.value("height",0) ) {
-					urls.push_back(image["link"]);
+					output.push_back(image["link"]);
 				}
 			}
 		}
@@ -104,7 +100,7 @@ void ImgurDownloader::websiteOptions(Options& opt) {
 	});
 
 	cout << "What is the minimum dimension wanted? (0 for none)" << endl;
-	this->min_size = opt.max_files = check<int>("Only enter number", "Number must be bigger than 0", [](const int& i) {
+	this->min_size = check<int>("Only enter number", "Number must be bigger than 0", [](const int& i) {
 		return i >= 0;
 	});
 }

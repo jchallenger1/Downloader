@@ -26,14 +26,14 @@ public:
 	Downloader(const Options& player_options);
 	virtual ~Downloader();
 	Options options;
-	virtual vector<string> getAllImages(string&) = 0;
-	void download(vector<string>&);
+	virtual void getAllImages(string&) = 0;
+	void download();
 	string createDirectory(string) const; //creates a directory and modifies the folder_path to the input folder.
 	virtual void websiteOptions(Options&) = 0; //options given by each website to adjust.
+	vector<string> urls; //urls of one page
 protected:
 	/* VARIABLES */
 	string folder_path;
-	vector<string> urls; //urls of one page
 	char error[CURL_ERROR_SIZE]; //message of error if one occurs
 	CURL* curl; //curl object, responsible for interacting with servers via requests.
 	json jsonp; //object that holds json from websites.
@@ -45,8 +45,9 @@ protected:
 	virtual vector<std::pair<string, string>> mapUrls(vector<string>&);
 	virtual vector<string> getPureImgUrl(vector<std::pair<string,string>>&);//some posts will direct to a webpage with the img, but here we obtain the pure image file, not the webpage of it.
 	void changeImgToMp4(string&); // changed imgur posts to mp4 extension, needed because .gif and .gifv can sometimes not work as expected.
-	virtual void getUrlsFromJson(const string&) = 0; //takes an unparsed json and gets the urls from it which points to the images or some random post we don't want.
+	virtual void getUrlsFromJson(const string&, vector<string>&) = 0; //takes an unparsed json and gets the urls from it which points to the images or some random post we don't want.
 	virtual bool validate(const string&) = 0; //validates the url to make sure it is a reddit/4chan/imgur url.
+	void getFileNames(const vector<string>&,vector<std::pair<string, string>>&) const noexcept; //takes the file name off of the url.
 };
 
 
@@ -55,11 +56,11 @@ protected:
 class RedditDownloader : public Downloader {
 public:
 	using Downloader::Downloader;
-	virtual vector<string> getAllImages(string&) override;
+	virtual void getAllImages(string&) override;
 private:
 	void nextPage(string&,string&) const;
 	void appendJsonString(string&) const;
-	virtual void getUrlsFromJson(const string&) override;
+	virtual void getUrlsFromJson(const string&, vector<string>&) override;
 	virtual bool validate(const string&) override;
 	virtual void websiteOptions(Options&) override;
 };
@@ -69,13 +70,14 @@ private:
 class ChanDownloader : public Downloader{
 public:
 	using Downloader::Downloader;
-	virtual vector<string> getAllImages(string&) override;
+	virtual void getAllImages(string&) override;
 private:
 	string chan_sub;
 	int min_size = 0;
-	virtual void getUrlsFromJson(const string&) override;
+	virtual void getUrlsFromJson(const string&, vector<string>&) override;
 	virtual bool validate(const string&) override;
 	virtual void websiteOptions(Options&) override;
+	inline string getBaseUrl(const string&) const;
 	void appendJsonString(string&) const;
 	void getChanSub(const string&);
 	vector<string> getThreads(const string&, const string&);
@@ -86,13 +88,13 @@ private:
 class TumblrDownloader : public Downloader {
 public:
 	using Downloader::Downloader;
-	virtual vector<string> getAllImages(string&) override;
+	virtual void getAllImages(string&) override;
 	virtual void websiteOptions(Options&) override;
 private:
-	string tumblr_auth = "";
+	string tumblr_auth = "0XpX1kLQeH3EobbeeMXgCcJ6ThcAZ1oDUeoiiC9GzUKEvOBpY6";
 	string pure_url; //the base url without any extensions, 'prefixes' or 'suffixes'.
 	int min_size = 0;
-	virtual void getUrlsFromJson(const string&) override;
+	virtual void getUrlsFromJson(const string&, vector<string>&) override;
 	virtual bool validate(const string&) override;
 	void getPureUrl(const string&);
 	template<typename T>
@@ -103,12 +105,12 @@ private:
 class ImgurDownloader : public Downloader {
 public:
 	using Downloader::Downloader;
-	virtual vector<string> getAllImages(string&) override;
+	virtual void getAllImages(string&) override;
 	virtual void websiteOptions(Options&) override;
 	int min_size = 0;
 private:
 	string query_string;
-	virtual void getUrlsFromJson(const string&) override;
+	virtual void getUrlsFromJson(const string&, vector<string>&) override;
 	virtual bool validate(const string&) override;
 	void getQueryString(const string&);
 };
