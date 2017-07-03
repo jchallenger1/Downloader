@@ -1,2 +1,2 @@
 # Downloader
-A Reddit subreddit, Imgur, Tumblr, 4chan post downloader. 
+A Reddit subreddit, Imgur gallery/album, Tumblr site, 4chan thread/page downloader. 
