@@ -61,9 +61,7 @@ void RedditDownloader::getAllImages(string& url) {
 		appendJsonString(url);
 		while (page_count > 0 && urls.size() < options.max_files) {
 			string all_reddit_json;
-			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &all_reddit_json);
+			initCurlSetup(url, all_reddit_json);
 			auto response = curl_easy_perform(curl);
 			curl_easy_reset(curl);
 

@@ -14,14 +14,7 @@ void ImgurDownloader::getAllImages(string& raw_url) {
 	if (validate(raw_url)) {
 		string url("https://api.imgur.com/3/album/" + this->query_string);
 		string json_buffer;
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json_buffer);
-		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
-
-		curl_slist* header_list = nullptr;
-		header_list = curl_slist_append(header_list, options.imgur_auth.c_str());
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
+		initCurlSetup(url, json_buffer);
 		auto response = curl_easy_perform(curl);
 		curl_easy_reset(curl);
 

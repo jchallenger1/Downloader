@@ -38,7 +38,7 @@ bool runMainOptions(Options& opt) {
 
 	cout << "These options is what happens when a duplicate file occurs,\nType 1 to skip it, 2 to overwrite it, 3 to create a new one. " << endl;
 	int dup = check<int>("Invalid input,(1) to skip,(2) to overwrite,(3) to create new", "Only input 1 2 or 3.", [](const int& i) {return i >= 1 && i <= 3; });
-	opt.duplicate_file = dup == 1 ? SKIP : dup == 2 ? OVERWRITE : CREATENEW;
+	opt.duplicate_file = dup == 1 ? File::SKIP : dup == 2 ? File::OVERWRITE : File::CREATENEW;
 
 	cout << "Enter (y) if you want to enter a path to a folder to download images, enter (n) if you want us to create a new folder for you." << endl;
 	char path = check<char>("Invalid input, (y) to enter path, (n) for us making a new folder", "Only enter (y)es or (n)o", yesOrNo);
@@ -75,6 +75,9 @@ bool runMainOptions(Options& opt) {
 	} // !if
 	else {
 		create_new = true;
+		cout << "Do you want to enter a name for the folder?(y/n)" << endl;
+		opt.folder_name = check<char>("Invalid input, only enter characters", "Yes or No.", yesOrNo);
+		
 	}
 	return create_new;
 }

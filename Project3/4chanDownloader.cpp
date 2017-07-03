@@ -97,14 +97,7 @@ void ChanDownloader::getAllImages(string& url) {
 		appendJsonString(url);
 
 		string pure_chan_json;
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &pure_chan_json);
-		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
-		curl_slist* header_list = nullptr;
-		header_list = curl_slist_append(header_list, "User-Agent: 0"); //4chan will otherwise not allow access.
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
-
+		initCurlSetup(url, pure_chan_json);
 		auto response = curl_easy_perform(curl);
 		curl_easy_reset(curl);
 

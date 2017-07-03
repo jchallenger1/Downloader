@@ -34,10 +34,7 @@ void TumblrDownloader::getAllImages(string& raw_url) {
 			string url = "https://api.tumblr.com/v2/blog/" + pure_url + "/posts/photo?limit=" +
 				std::to_string(limit) + "&offset=" + std::to_string(offset) + "&api_key=" + tumblr_auth;
 			string json_buffer;
-			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json_buffer);
-			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+			initCurlSetup(url, json_buffer);
 			auto response = curl_easy_perform(curl);
 			curl_easy_reset(curl);
 
@@ -85,10 +82,7 @@ bool TumblrDownloader::validate(const string& url) {
 		//send a request to the server, it will reply if the hostname is apart of the tumblr server.
 		string json_buffer; 
 		string test_url = "https://api.tumblr.com/v2/blog/" + pure_url + "/posts/photo?limit=1&api_key=" + tumblr_auth;
-		curl_easy_setopt(curl, CURLOPT_URL, test_url.c_str());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json_buffer);
-		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+		initCurlSetup(test_url, json_buffer);
 		auto response = curl_easy_perform(curl);
 		curl_easy_reset(curl);
 		if (response == CURLE_OK) {

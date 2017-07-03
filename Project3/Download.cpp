@@ -29,6 +29,22 @@ Downloader::~Downloader() {
 	curl_global_cleanup();
 }
 
+
+void Downloader::initCurlSetup(const string & url, const string& buffer) noexcept {
+
+	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+
+	curl_slist* header_list = nullptr;
+	header_list = curl_slist_append(header_list, "User-Agent: 0"); //4chan will otherwise not allow access.
+	header_list = curl_slist_append(header_list, options.imgur_auth.c_str());
+
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
+
+}
+
 inline void Downloader::createFolderPath(string& url) const {
 	int remove_chars = 0;
 	for (auto cbegin = url.crbegin(); cbegin != url.crend(); cbegin++) {
@@ -112,14 +128,7 @@ vector<string> Downloader::getPureImgUrl(vector<std::pair<string, string>>& mapp
 				std::reverse(query_string.begin(), query_string.end());
 				string request = "https://api.imgur.com/3/album/" + query_string;
 
-
-				curl_easy_setopt(curl, CURLOPT_URL, request.c_str());
-				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json_data);
-				curl_slist* header_list = nullptr;
-				header_list = curl_slist_append(header_list, options.imgur_auth.c_str());
-				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
-				curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, &error);
+				initCurlSetup(request, json_data);
 				auto response = curl_easy_perform(curl);
 				curl_easy_reset(curl);
 				if (response == CURLE_OK) {
@@ -153,13 +162,7 @@ vector<string> Downloader::getPureImgUrl(vector<std::pair<string, string>>& mapp
 				}
 				string request = "https://api.imgur.com/3/image/" + query_string;
 
-				curl_easy_setopt(curl, CURLOPT_URL, request.c_str());
-				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json_data);
-				curl_slist* header_list = nullptr;
-				header_list = curl_slist_append(header_list, options.imgur_auth.c_str());
-				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
-				curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, &error);
+				initCurlSetup(request, json_data);
 				auto response = curl_easy_perform(curl);
 				curl_easy_reset(curl);
 				if (response == CURLE_OK) {
@@ -187,10 +190,7 @@ vector<string> Downloader::getPureImgUrl(vector<std::pair<string, string>>& mapp
 				std::reverse(query.begin(), query.end());
 				string request("https://api.gfycat.com/v1test/gfycats/" + query);
 
-				curl_easy_setopt(curl, CURLOPT_URL, request.c_str());
-				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeJsonData);
-				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json_data);
-				curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, &error);
+				initCurlSetup(request, json_data);
 				auto response = curl_easy_perform(curl);
 				curl_easy_reset(curl);
 				if (response == CURLE_OK) {
@@ -259,9 +259,9 @@ void Downloader::download() {
 		std::experimental::filesystem::path image_path(options.current_path + img_name);
 		bool img_exists = std::experimental::filesystem::exists(image_path);
 
-		if (!(options.duplicate_file == SKIP && img_exists)) {
+		if (!(options.duplicate_file == File::SKIP && img_exists)) {
 			string full_path;
-			if (options.duplicate_file == CREATENEW && img_exists) { 
+			if (options.duplicate_file == File::CREATENEW && img_exists) { 
 				// adds a number to indicate the nth copy; sdp.jpg(2).
 				int new_duplicate = 2;
 				auto dot = std::find(download_urls.second.cbegin(), download_urls.second.cend(), '.');

@@ -7,7 +7,7 @@
 
 using std::string; using std::vector; using json = nlohmann::json;
 
-enum DuplicateFile {
+enum class File {
 		SKIP,OVERWRITE,CREATENEW };
 
 struct Options {
@@ -17,7 +17,7 @@ struct Options {
 	bool all_gallery; //imgur often has a gallery that can consist of 200+ imgs of possibly the same thing, option to turn this off.
 	string imgur_auth;
 	string current_path;//path where the application is located
-	int duplicate_file; // if the file already exists, it tells us what we should do with it.
+	File duplicate_file; // if the file already exists, it tells us what we should do with it.
 	string folder_name; //optional for the user to provide a name for the folder
 };
 
@@ -40,6 +40,7 @@ protected:
 	bool all = false; // checks if the downloader should download all photos on imgur, or only one.
 
 	/* MEMBER FUNCTIONS */
+	void Downloader::initCurlSetup(const string & url, const string& buffer) noexcept;
 	void createFolderPath(string&) const; //creates the string where all photos,gifs,vids are inputted into a folder named by the function.
 	static bool removeNonSupported(const string&);//some posts will have images and post we cannot support, we must get rid of them.
 	virtual vector<std::pair<string, string>> mapUrls(vector<string>&);
@@ -91,7 +92,7 @@ public:
 	virtual void getAllImages(string&) override;
 	virtual void websiteOptions(Options&) override;
 private:
-	string tumblr_auth = "0XpX1kLQeH3EobbeeMXgCcJ6ThcAZ1oDUeoiiC9GzUKEvOBpY6";
+	string tumblr_auth = "";
 	string pure_url; //the base url without any extensions, 'prefixes' or 'suffixes'.
 	int min_size = 0;
 	virtual void getUrlsFromJson(const string&, vector<string>&) override;
@@ -121,3 +122,5 @@ private:
 
 
 #endif // !DOWNLOADER
+
+

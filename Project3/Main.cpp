@@ -11,13 +11,12 @@ using std::string;  using std::endl; using std::cout;
 
 int main(int argc, char ** argv) {
 #if defined(WIN32) || defined(_WIN32) ||defined(__WIN32) || defined(_WIN64)
-	//string imgur_authorization = "";
-	//Options dev_options{ 1,3000,"",false, imgur_authorization ,string("") ,CREATENEW,"New folder"};
-	string your_client_id("b56bd55f8d0bfd4");
+	string your_client_id("");
 	string imgur_authorization("Authorization: Client-ID " + your_client_id);
 	string current_dir(argv[0]);
-	Options options{ 0,0,"",false,imgur_authorization,"",SKIP,"Your Pics" };
+	Options options{ 0,0,"",false,imgur_authorization,"",File::SKIP,"Your Pics" };
 	cout << "Choose a downloader, (reddit),(imgur),(4chan),(tumblr)" << endl;
+
 	string type = check<string>("Invalid input, (reddit), (imgur), (4chan), or (tumblr)","", [](const string& s){
 		return s == "reddit" || s == "imgur" || s == "4chan" || s == "tumblr";
 	});
